@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>bchave Wallet</title>
+  <!-- React UMD -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script>
+    // Fix for lucide-react UMD expecting 'react' instead of 'React'
+    window.react = window.React;
+    // Global error handler to display errors on screen
+    window.onerror = function (msg, url, lineNo, columnNo, error) {
+      document.body.innerHTML += '<div style="color:red; padding: 20px; font-family: sans-serif; background: #fff; z-index: 9999; position: relative;">' +
+        '<h3>Error:</h3><p>' + msg + '</p>' +
+        '<p>Line: ' + lineNo + '</p>' +
+        '</div>';
+      return false;
+    };
+  </script>
+  <!-- Babel Standalone for in-browser JSX transpilation -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- Lucide Icons UMD -->
+  <script src="https://unpkg.com/lucide-react@0.263.1/dist/umd/lucide-react.min.js"></script>
+</head>
+
+<body style="margin: 0; padding: 0; background: #E5E7EB;">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    // Extract hooks and components from global UMD objects
+    const { useState } = React;
+    const {
+      Menu, Bell, ArrowDown, ArrowUpRight, Scan, QrCode,
+      PiggyBank, CreditCard, Coins, Landmark, Download, Send,
+      TrendingUp, Home, Activity, Wallet, Eye, ChevronRight, Zap, Bitcoin, User, Settings, Sun, Moon, Shield, Lock, Globe
+    } = window.LucideReact;
+
+    const lightTheme = {
+      bg: "#F5F7F6",
+      surface: "#FFFFFF",
+      primary: "#16A34A",
+      primaryDark: "#0E3D2F",
+      primaryLight: "#D1FAE5",
+      text: "#111827",
+      textSub: "#6B7280",
+      border: "#E5E7EB",
+      isDark: false,
+    };
+
+    const darkTheme = {
+      bg: "#030712",
+      surface: "#111827",
+      primary: "#39ff14", // neon green
+      primaryDark: "#10b981",
+      primaryLight: "rgba(57,255,20,0.1)",
+      text: "#F9FAFB",
+      textSub: "#9CA3AF",
+      border: "#374151",
+      isDark: true,
+    };
+
+    const ThemeContext = React.createContext();
+    const useTheme = () => React.useContext(ThemeContext);
+
+    const fonts = `
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        .font-sans { font-family: 'Inter', sans-serif; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .neon-btn {
+          position: relative;
+        }
+        .neon-btn:hover .neon-svg-border {
+          opacity: 1 !important;
+        }
+        `;
+
+    const BCH_PRICE = 25000;
+
+    function fmtPHP(n) {
+      return "≈ " + n.toLocaleString("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 2 });
+    }
+
+    function ActionButton({ icon: Icon, label }) {
+      const { theme: c } = useTheme();
+      return (
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, flex: 1 }}>
+          <div style={{
+            width: "100%", height: 52, borderRadius: 14, background: c.primary,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            cursor: "pointer", color: "white", boxShadow: "0 4px 12px rgba(22,163,74,0.3)"
+          }}>
+            <Icon size={22} strokeWidth={2} />
+          </div>
+          <span className="font-sans" style={{ fontSize: 13, fontWeight: 500, color: c.text }}>{label}</span>
+        </div>
+      );
+    }
+
+    function AccountRow({ icon: Icon, label, timestamp, bchAmount, phpAmount }) {
+      const { theme: c } = useTheme();
+      return (
+        <div style={{ display: "flex", alignItems: "center", padding: "16px 0", borderBottom: `1px solid ${c.border}` }}>
+          <div style={{
+            width: 44, height: 44, borderRadius: "50%", background: c.primaryLight,
+            display: "flex", alignItems: "center", justifyContent: "center", marginRight: 16
+          }}>
+            <Icon size={22} color={c.primary} strokeWidth={2.5} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div className="font-sans" style={{ fontSize: 15, fontWeight: 600, color: c.text }}>{label}</div>
+            {timestamp && <div className="font-sans" style={{ fontSize: 12, fontWeight: 500, color: c.textSub, marginTop: 4 }}>{timestamp}</div>}
+          </div>
+          <div style={{ textAlign: "right", marginRight: 10 }}>
+            <div className="font-sans" style={{ fontSize: 13, fontWeight: 700, color: c.text }}>{bchAmount}</div>
+            <div className="font-sans" style={{ fontSize: 12, fontWeight: 500, color: c.textSub, marginTop: 4 }}>{phpAmount}</div>
+          </div>
+          <ChevronRight size={18} color={c.textSub} />
+        </div>
+      );
+    }
+
+    function NeonBorder() {
+      return (
+        <svg className="neon-svg-border" width="100%" height="100%" style={{ position: "absolute", top: 0, left: 0, overflow: "visible", pointerEvents: "none", opacity: 0, transition: "opacity 0.3s" }}>
+          <defs>
+            <filter id="neon-glow" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="2" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
+          <rect x="0" y="0" width="100%" height="100%" rx="16" ry="16" fill="none" stroke="#39ff14" strokeWidth="2" strokeDasharray="33.35 66.65" pathLength="100" filter="url(#neon-glow)">
+            <animate attributeName="stroke-dashoffset" values="100;0" dur="1.5s" repeatCount="indefinite" />
+          </rect>
+          <rect x="0" y="0" width="100%" height="100%" rx="16" ry="16" fill="none" stroke="#00f3ff" strokeWidth="2" strokeDasharray="33.35 66.65" strokeDashoffset="-33.33" pathLength="100" filter="url(#neon-glow)">
+            <animate attributeName="stroke-dashoffset" values="66.66;-33.33" dur="1.5s" repeatCount="indefinite" />
+          </rect>
+          <rect x="0" y="0" width="100%" height="100%" rx="16" ry="16" fill="none" stroke="#b026ff" strokeWidth="2" strokeDasharray="33.35 66.65" strokeDashoffset="-66.66" pathLength="100" filter="url(#neon-glow)">
+            <animate attributeName="stroke-dashoffset" values="33.33;-66.66" dur="1.5s" repeatCount="indefinite" />
+          </rect>
+        </svg>
+      );
+    }
+
+    // ---------- Screens ----------
+
+    const TRANSACTIONS = [
+      { id: 1, icon: Zap, label: "Weekly auto-buy", timestamp: "Jul 4, 2026, 10:42 AM", bchAmount: "+0.00156900 BCH", phpAmount: "Completed" },
+      { id: 2, icon: CreditCard, label: "Blue Bottle Coffee", timestamp: "Jul 4, 2026, 08:15 AM", bchAmount: "-0.00000620 BCH", phpAmount: "Completed" },
+      { id: 3, icon: Send, label: "Electric bill", timestamp: "Jul 3, 2026, 06:30 PM", bchAmount: "-0.00042110 BCH", phpAmount: "Completed" },
+      { id: 4, icon: Download, label: "From Jordan R.", timestamp: "Jul 3, 2026, 02:00 PM", bchAmount: "+0.00120000 BCH", phpAmount: "Completed" },
+      { id: 5, icon: Download, label: "From Alice S.", timestamp: "Jun 29, 2026, 11:45 AM", bchAmount: "+0.00500000 BCH", phpAmount: "Completed" },
+      { id: 6, icon: CreditCard, label: "Spotify Premium", timestamp: "Jun 29, 2026, 09:00 AM", bchAmount: "-0.00009500 BCH", phpAmount: "Completed" },
+      { id: 7, icon: Send, label: "Internet bill", timestamp: "Jun 28, 2026, 04:20 PM", bchAmount: "-0.00060000 BCH", phpAmount: "Completed" },
+      { id: 8, icon: Zap, label: "Monthly auto-buy", timestamp: "Jun 27, 2026, 10:00 AM", bchAmount: "+0.01000000 BCH", phpAmount: "Completed" },
+      { id: 9, icon: CreditCard, label: "Netflix", timestamp: "Jun 27, 2026, 08:30 AM", bchAmount: "-0.00012000 BCH", phpAmount: "Completed" },
+      { id: 10, icon: Download, label: "Refund Amazon", timestamp: "Jun 26, 2026, 03:15 PM", bchAmount: "+0.00045000 BCH", phpAmount: "Completed" },
+    ];
+
+    function HomeScreen() {
+      const { theme: c, toggleTheme, isDark, setTab } = useTheme();
+      const [hideBalance, setHideBalance] = React.useState(false);
+
+      const displayedTx = TRANSACTIONS.slice(0, 5);
+
+      return (
+        <div>
+          {/* Header */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28 }}>
+            <Menu size={24} color={c.text} style={{ cursor: "pointer" }} />
+            <div className="font-sans" style={{ fontSize: 22, fontWeight: 700, color: c.primary, letterSpacing: "-0.5px" }}>
+              <span style={{ color: c.primaryDark }}>bch</span>ave
+            </div>
+            <div style={{ display: "flex", gap: 12 }}>
+              {isDark ? (
+                <Sun size={24} color={c.text} style={{ cursor: "pointer" }} onClick={toggleTheme} />
+              ) : (
+                <Moon size={24} color={c.text} style={{ cursor: "pointer" }} onClick={toggleTheme} />
+              )}
+              <Bell size={24} color={c.text} style={{ cursor: "pointer" }} />
+              <Settings size={24} color={c.text} style={{ cursor: "pointer" }} />
+            </div>
+          </div>
+
+          {/* Unified Balance Card */}
+          <div style={{
+            marginBottom: 36,
+            padding: "28px 24px",
+            borderRadius: 28,
+            background: "linear-gradient(145deg, rgba(20,40,20,0.9) 0%, rgba(10,20,10,0.95) 100%)",
+            backdropFilter: "blur(20px)",
+            border: "1px solid rgba(57,255,20,0.2)",
+            boxShadow: "0 24px 48px -12px rgba(57,255,20,0.15), inset 0 1px 2px rgba(57,255,20,0.3)",
+            position: "relative",
+            overflow: "hidden"
+          }}>
+            {/* Techy background pattern/glow */}
+            <div style={{
+              position: "absolute", top: "-50%", right: "-20%", width: 300, height: 300,
+              background: "radial-gradient(circle, rgba(57,255,20,0.15) 0%, rgba(0,0,0,0) 70%)",
+              borderRadius: "50%", pointerEvents: "none"
+            }} />
+
+            <div className="font-sans" style={{ fontSize: 14, fontWeight: 500, color: "rgba(255,255,255,0.6)", display: "flex", alignItems: "center", gap: 6, marginBottom: 12, position: "relative", zIndex: 1 }}>
+              Total Balance <Eye onClick={() => setHideBalance(!hideBalance)} style={{ cursor: "pointer" }} size={16} />
+            </div>
+
+            <div className="font-sans" style={{ display: "flex", alignItems: "baseline", marginBottom: 4, position: "relative", zIndex: 1 }}>
+              <span style={{ fontSize: 32, fontWeight: 700, color: "#ffffff", letterSpacing: "-1px", textShadow: "0 0 20px rgba(57,255,20,0.4)" }}>
+                {hideBalance ? "•••••••• BCH" : "2.0809651 BCH"}
+              </span>
+            </div>
+
+            <div className="font-sans" style={{ fontSize: 15, fontWeight: 500, color: "#39ff14", marginBottom: 32, position: "relative", zIndex: 1, textShadow: "0 0 10px rgba(57,255,20,0.3)" }}>
+              {hideBalance ? "••••••" : fmtPHP(2.0809651 * BCH_PRICE)}
+            </div>
+
+            <div style={{ display: "flex", gap: 14, position: "relative", zIndex: 1 }}>
+              <div className="neon-btn" style={{
+                flex: 1, padding: "14px 0", borderRadius: 16, background: "rgba(57,255,20,0.1)",
+                border: "1px solid rgba(57,255,20,0.2)", display: "flex", justifyContent: "center",
+                alignItems: "center", gap: 8, cursor: "pointer", backdropFilter: "blur(10px)",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.2), inset 0 1px 1px rgba(57,255,20,0.2)"
+              }}>
+                <NeonBorder />
+                <Download size={18} color="#39ff14" style={{ position: "relative", zIndex: 1 }} />
+                <span className="font-sans" style={{ fontSize: 15, fontWeight: 600, color: "#39ff14", position: "relative", zIndex: 1 }}>Receive</span>
+              </div>
+              <div className="neon-btn" style={{
+                flex: 1, padding: "14px 0", borderRadius: 16, background: "rgba(57,255,20,0.1)",
+                border: "1px solid rgba(57,255,20,0.2)", display: "flex", justifyContent: "center",
+                alignItems: "center", gap: 8, cursor: "pointer", backdropFilter: "blur(10px)",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.2), inset 0 1px 1px rgba(57,255,20,0.2)"
+              }}>
+                <NeonBorder />
+                <Send size={18} color="#39ff14" style={{ position: "relative", zIndex: 1 }} />
+                <span className="font-sans" style={{ fontSize: 15, fontWeight: 600, color: "#39ff14", position: "relative", zIndex: 1 }}>Send</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Transactions */}
+          <div style={{ marginBottom: 28 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <div className="font-sans" style={{ fontSize: 16, fontWeight: 700, color: c.text }}>Transactions</div>
+              <div className="font-sans" onClick={() => setTab && setTab("activity")} style={{ fontSize: 14, fontWeight: 600, color: c.primary, cursor: "pointer" }}>
+                See all
+              </div>
+            </div>
+            <div>
+              {displayedTx.map(tx => (
+                <AccountRow key={tx.id} icon={tx.icon} label={tx.label} timestamp={tx.timestamp} bchAmount={tx.bchAmount} phpAmount={tx.phpAmount} />
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function ActivityScreen() {
+      const { theme: c } = useTheme();
+      return (
+        <div>
+          <div className="font-sans" style={{ fontSize: 24, fontWeight: 700, color: c.text, marginBottom: 24 }}>Activity</div>
+          <div style={{ background: c.surface, borderRadius: 16 }}>
+            {TRANSACTIONS.map(tx => (
+              <AccountRow key={tx.id} icon={tx.icon} label={tx.label} timestamp={tx.timestamp} bchAmount={tx.bchAmount} phpAmount={tx.phpAmount} />
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    function LendScreen() {
+      const { theme: c, isDark } = useTheme();
+      return (
+        <div style={{ paddingBottom: 20 }}>
+          <div className="font-sans" style={{ fontSize: 24, fontWeight: 700, color: c.text, marginBottom: 24 }}>Lend & Borrow</div>
+
+          {/* Lend Section */}
+          <div style={{
+            background: isDark ? "linear-gradient(145deg, rgba(20,40,20,0.8) 0%, rgba(10,20,10,0.9) 100%)" : c.surface,
+            borderRadius: 20, border: isDark ? "1px solid rgba(57,255,20,0.2)" : `1px solid ${c.border}`, padding: 24,
+            boxShadow: isDark ? "0 10px 30px rgba(57,255,20,0.1)" : "0 4px 20px rgba(0,0,0,0.03)", marginBottom: 24
+          }}>
+            <div className="font-sans" style={{ fontSize: 15, fontWeight: 500, color: c.textSub, marginBottom: 8 }}>Total Lent (Supplying)</div>
+            <div className="font-sans" style={{ fontSize: 32, fontWeight: 700, color: c.text, textShadow: isDark ? "0 0 15px rgba(57,255,20,0.3)" : "none" }}>0.20000000 BCH</div>
+            <div className="font-sans" style={{ fontSize: 16, color: "#39ff14", marginTop: 8, fontWeight: 600 }}>+ 6.5% APY Earned</div>
+
+            <div style={{ marginTop: 24, display: "flex", gap: 12 }}>
+              <div style={{ flex: 1, padding: "12px 0", borderRadius: 12, background: "rgba(57,255,20,0.1)", border: "1px solid rgba(57,255,20,0.3)", textAlign: "center", color: "#39ff14", fontWeight: 600, cursor: "pointer" }}>Supply BCH</div>
+              <div style={{ flex: 1, padding: "12px 0", borderRadius: 12, background: isDark ? "rgba(255,255,255,0.05)" : "#f3f4f6", border: `1px solid ${c.border}`, textAlign: "center", color: c.text, fontWeight: 600, cursor: "pointer" }}>Withdraw</div>
+            </div>
+          </div>
+
+          {/* Borrow Section */}
+          <div style={{
+            background: isDark ? "linear-gradient(145deg, rgba(20,20,40,0.8) 0%, rgba(10,10,20,0.9) 100%)" : c.surface,
+            borderRadius: 20, border: isDark ? "1px solid rgba(0,243,255,0.2)" : `1px solid ${c.border}`, padding: 24,
+            boxShadow: isDark ? "0 10px 30px rgba(0,243,255,0.1)" : "0 4px 20px rgba(0,0,0,0.03)"
+          }}>
+            <div className="font-sans" style={{ display: "flex", justifyContent: "space-between" }}>
+              <div style={{ fontSize: 15, fontWeight: 500, color: c.textSub, marginBottom: 8 }}>Total Borrowed</div>
+              <div style={{ fontSize: 13, fontWeight: 500, color: "#00f3ff" }}>Limit: 1.5 BCH</div>
+            </div>
+            <div className="font-sans" style={{ fontSize: 32, fontWeight: 700, color: c.text, textShadow: isDark ? "0 0 15px rgba(0,243,255,0.3)" : "none" }}>0.05000000 BCH</div>
+            <div className="font-sans" style={{ fontSize: 16, color: "#ff4d4d", marginTop: 8, fontWeight: 600 }}>- 2.1% APR Due</div>
+
+            {/* Health Factor */}
+            <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ fontSize: 12, color: c.textSub }}>Health Factor</div>
+              <div style={{ flex: 1, height: 6, background: "rgba(255,255,255,0.1)", borderRadius: 3 }}>
+                <div style={{ width: "80%", height: "100%", background: "#39ff14", borderRadius: 3, boxShadow: "0 0 8px #39ff14" }} />
+              </div>
+              <div style={{ fontSize: 12, color: "#39ff14", fontWeight: 700 }}>Safe</div>
+            </div>
+
+            <div style={{ marginTop: 24, display: "flex", gap: 12 }}>
+              <div style={{ flex: 1, padding: "12px 0", borderRadius: 12, background: "rgba(0,243,255,0.1)", border: "1px solid rgba(0,243,255,0.3)", textAlign: "center", color: "#00f3ff", fontWeight: 600, cursor: "pointer" }}>Borrow</div>
+              <div style={{ flex: 1, padding: "12px 0", borderRadius: 12, background: isDark ? "rgba(255,255,255,0.05)" : "#f3f4f6", border: `1px solid ${c.border}`, textAlign: "center", color: c.text, fontWeight: 600, cursor: "pointer" }}>Repay</div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function OptionRow({ icon: Icon, label, value, color }) {
+      const { theme: c, isDark } = useTheme();
+      return (
+        <div style={{ display: "flex", alignItems: "center", padding: "16px 0", borderBottom: `1px solid ${c.border}`, cursor: "pointer", overflow: "hidden" }}>
+          <div style={{ width: 40, height: 40, borderRadius: "12px", background: isDark ? "rgba(255,255,255,0.05)" : c.primaryLight, display: "flex", alignItems: "center", justifyContent: "center", marginRight: 16 }}>
+            <Icon size={20} color={color || c.text} />
+          </div>
+          <div className="font-sans" style={{ flex: 1, fontSize: 16, fontWeight: 500, color: c.text }}>{label}</div>
+          {value && <div className="font-sans" style={{ fontSize: 14, color: c.textSub, marginRight: 12 }}>{value}</div>}
+          <ChevronRight size={18} color={c.textSub} />
+        </div>
+      );
+    }
+
+    function WalletSettingsScreen() {
+      const { theme: c, isDark } = useTheme();
+      return (
+        <div style={{ paddingBottom: 20 }}>
+          <div className="font-sans" style={{ fontSize: 24, fontWeight: 700, color: c.text, marginBottom: 24 }}>Profile</div>
+
+          {/* Profile Header */}
+          <div style={{ display: "flex", alignItems: "center", marginBottom: 32 }}>
+            <div style={{ width: 64, height: 64, borderRadius: "50%", background: isDark ? "linear-gradient(135deg, #39ff14, #00f3ff)" : c.primary, display: "flex", alignItems: "center", justifyContent: "center", marginRight: 16, boxShadow: isDark ? "0 0 20px rgba(57,255,20,0.4)" : "none", overflow: "hidden" }}>
+              <img src="profile.jpg" alt="Profile" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            </div>
+            <div>
+              <div className="font-sans" style={{ fontSize: 20, fontWeight: 700, color: c.text }}>Recardo Omlang</div>
+              <div className="font-sans" style={{ fontSize: 14, color: c.textSub, marginTop: 4 }}>@Odracer_Sats</div>
+            </div>
+          </div>
+
+          <div className="font-sans" style={{ fontSize: 14, fontWeight: 600, color: c.textSub, marginBottom: 8, textTransform: "uppercase", letterSpacing: "1px" }}>Security</div>
+          <div style={{ background: isDark ? "rgba(255,255,255,0.02)" : c.surface, borderRadius: 16, padding: "0 16px", marginBottom: 24, border: `1px solid ${c.border}` }}>
+            <OptionRow icon={Shield} label="Recovery Phrase" color="#b026ff" />
+            <OptionRow icon={Lock} label="App PIN & Biometrics" value="Enabled" color="#39ff14" />
+          </div>
+
+          <div className="font-sans" style={{ fontSize: 14, fontWeight: 600, color: c.textSub, marginBottom: 8, textTransform: "uppercase", letterSpacing: "1px" }}>Preferences</div>
+          <div style={{ background: isDark ? "rgba(255,255,255,0.02)" : c.surface, borderRadius: 16, padding: "0 16px", marginBottom: 24, border: `1px solid ${c.border}` }}>
+            <OptionRow icon={Settings} label="Default Currency" value="PHP" color="#00f3ff" />
+            <OptionRow icon={Bell} label="Notifications" color="#fcd34d" />
+            <OptionRow icon={Globe} label="Network Provider" value="Mainnet" color="#39ff14" />
+          </div>
+        </div>
+      );
+    }
+
+    // ---------- App ----------
+
+    const TABS = [
+      { id: "home", label: "Home", icon: Home },
+      { id: "activity", label: "Activity", icon: Activity },
+      { id: "scan", label: "Scan", icon: QrCode, isAction: true },
+      { id: "lend", label: "Lend/Borrow", icon: Coins },
+      { id: "profile", label: "Profile", icon: User },
+    ];
+
+    function App() {
+      const [tab, setTab] = useState("home");
+      const [isDark, setIsDark] = useState(false);
+      const c = isDark ? darkTheme : lightTheme;
+
+      React.useEffect(() => {
+        document.body.style.background = c.bg;
+      }, [c.bg]);
+
+      return (
+        <ThemeContext.Provider value={{ theme: c, isDark, toggleTheme: () => setIsDark(!isDark), setTab }}>
+          <div className="font-sans" style={{
+            minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 16px",
+          }}>
+            <style>{fonts}</style>
+            <div style={{
+              width: 390, height: 780, background: c.surface, borderRadius: 48, border: "12px solid #111827",
+              boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)", position: "relative", overflow: "hidden",
+              display: "flex", flexDirection: "column",
+            }}>
+              {/* notch */}
+              <div style={{
+                position: "absolute", top: 12, left: "50%", transform: "translateX(-50%)",
+                width: 120, height: 28, background: "#111827", borderRadius: 14, zIndex: 10,
+              }} />
+
+              {/* body */}
+              <div className="no-scrollbar" style={{ flex: 1, overflowY: "auto", padding: "52px 24px 100px" }}>
+                {tab === "home" && <HomeScreen />}
+                {tab === "activity" && <ActivityScreen />}
+                {tab === "lend" && <LendScreen />}
+                {tab === "profile" && <WalletSettingsScreen />}
+              </div>
+
+              {/* tab bar */}
+              <div style={{
+                position: "absolute", bottom: 20, left: 16, right: 16, background: isDark ? "rgba(10, 30, 10, 0.7)" : "rgba(255,255,255,0.85)",
+                backdropFilter: "blur(24px) saturate(150%)", borderRadius: 32, display: "flex", padding: "12px 10px",
+                boxShadow: isDark ? "0 8px 32px rgba(57, 255, 20, 0.3), inset 0 0 2px rgba(57, 255, 20, 0.5)" : "0 10px 40px rgba(0,0,0,0.15)", border: isDark ? "1px solid rgba(57, 255, 20, 0.3)" : `1px solid ${c.border}`
+              }}>
+                {TABS.map(t => {
+                  const Icon = t.icon;
+                  if (t.isAction) {
+                    return (
+                      <div key={t.id} onClick={() => { }} style={{
+                        flex: 1, display: "flex", justifyContent: "center", alignItems: "center", position: "relative"
+                      }}>
+                        <div style={{
+                          position: "absolute", top: -24,
+                          width: 60, height: 60, borderRadius: "50%", background: isDark ? "linear-gradient(135deg, rgba(57, 255, 20, 0.9), rgba(20, 120, 10, 0.9))" : c.primary,
+                          display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(10px)",
+                          cursor: "pointer", boxShadow: isDark ? "0 0 20px rgba(57,255,20,0.6)" : "0 6px 16px rgba(22,163,74,0.4)", border: isDark ? "2px solid rgba(57,255,20,0.8)" : "4px solid white"
+                        }}>
+                          <Icon size={26} color="white" strokeWidth={2.5} />
+                        </div>
+                      </div>
+                    )
+                  }
+                  const active = tab === t.id;
+                  return (
+                    <div key={t.id} onClick={() => setTab(t.id)} style={{
+                      flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 6, cursor: "pointer",
+                    }}>
+                      <Icon size={24} color={active ? (isDark ? "#39ff14" : c.primary) : c.textSub} strokeWidth={active ? 2.5 : 2} style={{ filter: (active && isDark) ? "drop-shadow(0 0 6px rgba(57,255,20,0.8))" : "none" }} />
+                      <span className="font-sans" style={{ fontSize: 11, fontWeight: active ? 600 : 500, color: active ? (isDark ? "#39ff14" : c.primary) : c.textSub, textShadow: (active && isDark) ? "0 0 6px rgba(57,255,20,0.8)" : "none" }}>{t.label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </ThemeContext.Provider>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+
+</html>
