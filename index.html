@@ -35,7 +35,7 @@
     const {
       Menu, Bell, ArrowDown, ArrowUpRight, Scan, QrCode,
       PiggyBank, CreditCard, Coins, Landmark, Download, Send,
-      TrendingUp, Home, Activity, Wallet, Eye, ChevronRight, Zap, Bitcoin, User, Settings, Sun, Moon, Shield, Lock, Globe
+      TrendingUp, Home, Activity, Wallet, Eye, ChevronRight, Zap, Bitcoin, User, Settings, Sun, Moon, Shield, Lock, Globe, Copy
     } = window.LucideReact;
 
     const lightTheme = {
@@ -62,10 +62,14 @@
       isDark: true,
     };
 
-    const ThemeContext = React.createContext();
-    const useTheme = () => React.useContext(ThemeContext);
+    const AppContext = React.createContext();
+    const useAppContext = () => React.useContext(AppContext);
 
     const fonts = `
+        @keyframes slideUp {
+          from { transform: translateY(100%); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         .font-sans { font-family: 'Inter', sans-serif; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -77,14 +81,20 @@
         }
         `;
 
-    const BCH_PRICE = 25000;
-
-    function fmtPHP(n) {
-      return "≈ " + n.toLocaleString("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 2 });
+    function fmtFiat(n, currency) {
+      const rates = { PHP: 25000, USD: 450, EUR: 410, GBP: 350, JPY: 60000 };
+      const rate = rates[currency] || 450;
+      let locale = "en-US";
+      if (currency === "PHP") locale = "en-PH";
+      if (currency === "EUR") locale = "de-DE";
+      if (currency === "GBP") locale = "en-GB";
+      if (currency === "JPY") locale = "ja-JP";
+      
+      return "≈ " + (n * rate).toLocaleString(locale, { style: "currency", currency: currency, maximumFractionDigits: 2 });
     }
 
     function ActionButton({ icon: Icon, label }) {
-      const { theme: c } = useTheme();
+      const { theme: c } = useAppContext();
       return (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, flex: 1 }}>
           <div style={{
@@ -100,7 +110,7 @@
     }
 
     function AccountRow({ icon: Icon, label, timestamp, bchAmount, phpAmount }) {
-      const { theme: c } = useTheme();
+      const { theme: c } = useAppContext();
       return (
         <div style={{ display: "flex", alignItems: "center", padding: "16px 0", borderBottom: `1px solid ${c.border}` }}>
           <div style={{
@@ -163,16 +173,16 @@
     ];
 
     function HomeScreen() {
-      const { theme: c, toggleTheme, isDark, setTab } = useTheme();
+      const { theme: c, toggleTheme, isDark, setTab, bchBalance, txHistory, openModal, settings } = useAppContext();
       const [hideBalance, setHideBalance] = React.useState(false);
 
-      const displayedTx = TRANSACTIONS.slice(0, 5);
+      const displayedTx = txHistory.slice(0, 5);
 
       return (
         <div>
           {/* Header */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28 }}>
-            <Menu size={24} color={c.text} style={{ cursor: "pointer" }} />
+            <Menu size={24} color={c.text} style={{ cursor: "pointer" }} onClick={() => openModal("Menu")} />
             <div className="font-sans" style={{ fontSize: 22, fontWeight: 700, color: c.primary, letterSpacing: "-0.5px" }}>
               <span style={{ color: c.primaryDark }}>bch</span>ave
             </div>
@@ -182,8 +192,8 @@
               ) : (
                 <Moon size={24} color={c.text} style={{ cursor: "pointer" }} onClick={toggleTheme} />
               )}
-              <Bell size={24} color={c.text} style={{ cursor: "pointer" }} />
-              <Settings size={24} color={c.text} style={{ cursor: "pointer" }} />
+              <Bell size={24} color={c.text} style={{ cursor: "pointer" }} onClick={() => alert("No new notifications")} />
+              <Settings size={24} color={c.text} style={{ cursor: "pointer" }} onClick={() => setTab("profile")} />
             </div>
           </div>
 
@@ -212,16 +222,16 @@
 
             <div className="font-sans" style={{ display: "flex", alignItems: "baseline", marginBottom: 4, position: "relative", zIndex: 1 }}>
               <span style={{ fontSize: 32, fontWeight: 700, color: "#ffffff", letterSpacing: "-1px", textShadow: "0 0 20px rgba(57,255,20,0.4)" }}>
-                {hideBalance ? "•••••••• BCH" : "2.0809651 BCH"}
+                {hideBalance ? "•••••••• BCH" : `${bchBalance.toFixed(8)} BCH`}
               </span>
             </div>
 
             <div className="font-sans" style={{ fontSize: 15, fontWeight: 500, color: "#39ff14", marginBottom: 32, position: "relative", zIndex: 1, textShadow: "0 0 10px rgba(57,255,20,0.3)" }}>
-              {hideBalance ? "••••••" : fmtPHP(2.0809651 * BCH_PRICE)}
+              {hideBalance ? "••••••" : fmtFiat(bchBalance, settings.currency)}
             </div>
 
             <div style={{ display: "flex", gap: 14, position: "relative", zIndex: 1 }}>
-              <div className="neon-btn" style={{
+              <div className="neon-btn" onClick={() => openModal("Receive")} style={{
                 flex: 1, padding: "14px 0", borderRadius: 16, background: "rgba(57,255,20,0.1)",
                 border: "1px solid rgba(57,255,20,0.2)", display: "flex", justifyContent: "center",
                 alignItems: "center", gap: 8, cursor: "pointer", backdropFilter: "blur(10px)",
@@ -231,7 +241,7 @@
                 <Download size={18} color="#39ff14" style={{ position: "relative", zIndex: 1 }} />
                 <span className="font-sans" style={{ fontSize: 15, fontWeight: 600, color: "#39ff14", position: "relative", zIndex: 1 }}>Receive</span>
               </div>
-              <div className="neon-btn" style={{
+              <div className="neon-btn" onClick={() => openModal("Send")} style={{
                 flex: 1, padding: "14px 0", borderRadius: 16, background: "rgba(57,255,20,0.1)",
                 border: "1px solid rgba(57,255,20,0.2)", display: "flex", justifyContent: "center",
                 alignItems: "center", gap: 8, cursor: "pointer", backdropFilter: "blur(10px)",
@@ -263,12 +273,12 @@
     }
 
     function ActivityScreen() {
-      const { theme: c } = useTheme();
+      const { theme: c, txHistory } = useAppContext();
       return (
         <div>
           <div className="font-sans" style={{ fontSize: 24, fontWeight: 700, color: c.text, marginBottom: 24 }}>Activity</div>
           <div style={{ background: c.surface, borderRadius: 16 }}>
-            {TRANSACTIONS.map(tx => (
+            {txHistory.map(tx => (
               <AccountRow key={tx.id} icon={tx.icon} label={tx.label} timestamp={tx.timestamp} bchAmount={tx.bchAmount} phpAmount={tx.phpAmount} />
             ))}
           </div>
@@ -276,8 +286,14 @@
       );
     }
 
+    const LENDERS = [
+      { id: 1, name: "Alice's Vault", available: 5.0, apr: 1.5 },
+      { id: 2, name: "DeFi Protocol A", available: 12.5, apr: 2.1 },
+      { id: 3, name: "Bob (Peer-to-Peer)", available: 0.8, apr: 1.2 },
+    ];
+
     function LendScreen() {
-      const { theme: c, isDark } = useTheme();
+      const { theme: c, isDark, totalLent, totalBorrowed, openModal } = useAppContext();
       return (
         <div style={{ paddingBottom: 20 }}>
           <div className="font-sans" style={{ fontSize: 24, fontWeight: 700, color: c.text, marginBottom: 24 }}>Lend & Borrow</div>
@@ -289,12 +305,12 @@
             boxShadow: isDark ? "0 10px 30px rgba(57,255,20,0.1)" : "0 4px 20px rgba(0,0,0,0.03)", marginBottom: 24
           }}>
             <div className="font-sans" style={{ fontSize: 15, fontWeight: 500, color: c.textSub, marginBottom: 8 }}>Total Lent (Supplying)</div>
-            <div className="font-sans" style={{ fontSize: 32, fontWeight: 700, color: c.text, textShadow: isDark ? "0 0 15px rgba(57,255,20,0.3)" : "none" }}>0.20000000 BCH</div>
+            <div className="font-sans" style={{ fontSize: 32, fontWeight: 700, color: c.text, textShadow: isDark ? "0 0 15px rgba(57,255,20,0.3)" : "none" }}>{totalLent.toFixed(8)} BCH</div>
             <div className="font-sans" style={{ fontSize: 16, color: "#39ff14", marginTop: 8, fontWeight: 600 }}>+ 6.5% APY Earned</div>
 
             <div style={{ marginTop: 24, display: "flex", gap: 12 }}>
-              <div style={{ flex: 1, padding: "12px 0", borderRadius: 12, background: "rgba(57,255,20,0.1)", border: "1px solid rgba(57,255,20,0.3)", textAlign: "center", color: "#39ff14", fontWeight: 600, cursor: "pointer" }}>Supply BCH</div>
-              <div style={{ flex: 1, padding: "12px 0", borderRadius: 12, background: isDark ? "rgba(255,255,255,0.05)" : "#f3f4f6", border: `1px solid ${c.border}`, textAlign: "center", color: c.text, fontWeight: 600, cursor: "pointer" }}>Withdraw</div>
+              <div onClick={() => openModal("Supply")} style={{ flex: 1, padding: "12px 0", borderRadius: 12, background: "rgba(57,255,20,0.1)", border: "1px solid rgba(57,255,20,0.3)", textAlign: "center", color: "#39ff14", fontWeight: 600, cursor: "pointer" }}>Supply BCH</div>
+              <div onClick={() => openModal("Withdraw")} style={{ flex: 1, padding: "12px 0", borderRadius: 12, background: isDark ? "rgba(255,255,255,0.05)" : "#f3f4f6", border: `1px solid ${c.border}`, textAlign: "center", color: c.text, fontWeight: 600, cursor: "pointer" }}>Withdraw</div>
             </div>
           </div>
 
@@ -308,7 +324,7 @@
               <div style={{ fontSize: 15, fontWeight: 500, color: c.textSub, marginBottom: 8 }}>Total Borrowed</div>
               <div style={{ fontSize: 13, fontWeight: 500, color: "#00f3ff" }}>Limit: 1.5 BCH</div>
             </div>
-            <div className="font-sans" style={{ fontSize: 32, fontWeight: 700, color: c.text, textShadow: isDark ? "0 0 15px rgba(0,243,255,0.3)" : "none" }}>0.05000000 BCH</div>
+            <div className="font-sans" style={{ fontSize: 32, fontWeight: 700, color: c.text, textShadow: isDark ? "0 0 15px rgba(0,243,255,0.3)" : "none" }}>{totalBorrowed.toFixed(8)} BCH</div>
             <div className="font-sans" style={{ fontSize: 16, color: "#ff4d4d", marginTop: 8, fontWeight: 600 }}>- 2.1% APR Due</div>
 
             {/* Health Factor */}
@@ -321,18 +337,43 @@
             </div>
 
             <div style={{ marginTop: 24, display: "flex", gap: 12 }}>
-              <div style={{ flex: 1, padding: "12px 0", borderRadius: 12, background: "rgba(0,243,255,0.1)", border: "1px solid rgba(0,243,255,0.3)", textAlign: "center", color: "#00f3ff", fontWeight: 600, cursor: "pointer" }}>Borrow</div>
-              <div style={{ flex: 1, padding: "12px 0", borderRadius: 12, background: isDark ? "rgba(255,255,255,0.05)" : "#f3f4f6", border: `1px solid ${c.border}`, textAlign: "center", color: c.text, fontWeight: 600, cursor: "pointer" }}>Repay</div>
+              <div onClick={() => openModal("Borrow")} style={{ flex: 1, padding: "12px 0", borderRadius: 12, background: "rgba(0,243,255,0.1)", border: "1px solid rgba(0,243,255,0.3)", textAlign: "center", color: "#00f3ff", fontWeight: 600, cursor: "pointer" }}>Borrow</div>
+              <div onClick={() => openModal("Repay")} style={{ flex: 1, padding: "12px 0", borderRadius: 12, background: isDark ? "rgba(255,255,255,0.05)" : "#f3f4f6", border: `1px solid ${c.border}`, textAlign: "center", color: c.text, fontWeight: 600, cursor: "pointer" }}>Repay</div>
+            </div>
+          </div>
+
+          {/* Available Lenders */}
+          <div style={{ marginTop: 32 }}>
+            <div className="font-sans" style={{ fontSize: 18, fontWeight: 700, color: c.text, marginBottom: 16 }}>Available Lenders</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {LENDERS.map(lender => (
+                <div key={lender.id} style={{
+                  background: isDark ? "rgba(255,255,255,0.02)" : c.surface,
+                  borderRadius: 16, border: `1px solid ${c.border}`, padding: 16,
+                  display: "flex", justifyContent: "space-between", alignItems: "center"
+                }}>
+                  <div>
+                    <div className="font-sans" style={{ fontSize: 15, fontWeight: 600, color: c.text }}>{lender.name}</div>
+                    <div className="font-sans" style={{ fontSize: 13, color: c.textSub, marginTop: 4 }}>APR: <span style={{color: "#ff4d4d"}}>{lender.apr}%</span> • Up to {lender.available} BCH</div>
+                  </div>
+                  <div onClick={() => openModal("Borrow from " + lender.name, lender)} style={{
+                    padding: "8px 16px", borderRadius: 10, background: "rgba(0,243,255,0.1)",
+                    border: "1px solid rgba(0,243,255,0.3)", color: "#00f3ff", fontWeight: 600, cursor: "pointer", fontSize: 13
+                  }}>
+                    Borrow
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
       );
     }
 
-    function OptionRow({ icon: Icon, label, value, color }) {
-      const { theme: c, isDark } = useTheme();
+    function OptionRow({ icon: Icon, label, value, color, onClick }) {
+      const { theme: c, isDark } = useAppContext();
       return (
-        <div style={{ display: "flex", alignItems: "center", padding: "16px 0", borderBottom: `1px solid ${c.border}`, cursor: "pointer", overflow: "hidden" }}>
+        <div onClick={onClick} style={{ display: "flex", alignItems: "center", padding: "16px 0", borderBottom: `1px solid ${c.border}`, cursor: "pointer", overflow: "hidden" }}>
           <div style={{ width: 40, height: 40, borderRadius: "12px", background: isDark ? "rgba(255,255,255,0.05)" : c.primaryLight, display: "flex", alignItems: "center", justifyContent: "center", marginRight: 16 }}>
             <Icon size={20} color={color || c.text} />
           </div>
@@ -344,7 +385,7 @@
     }
 
     function WalletSettingsScreen() {
-      const { theme: c, isDark } = useTheme();
+      const { theme: c, isDark, settings, updateSetting, openModal } = useAppContext();
       return (
         <div style={{ paddingBottom: 20 }}>
           <div className="font-sans" style={{ fontSize: 24, fontWeight: 700, color: c.text, marginBottom: 24 }}>Profile</div>
@@ -354,23 +395,27 @@
             <div style={{ width: 64, height: 64, borderRadius: "50%", background: isDark ? "linear-gradient(135deg, #39ff14, #00f3ff)" : c.primary, display: "flex", alignItems: "center", justifyContent: "center", marginRight: 16, boxShadow: isDark ? "0 0 20px rgba(57,255,20,0.4)" : "none", overflow: "hidden" }}>
               <img src="profile.jpg" alt="Profile" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
             </div>
-            <div>
+            <div style={{ flex: 1 }}>
               <div className="font-sans" style={{ fontSize: 20, fontWeight: 700, color: c.text }}>Recardo Omlang</div>
               <div className="font-sans" style={{ fontSize: 14, color: c.textSub, marginTop: 4 }}>@Odracer_Sats</div>
+              <div style={{ display: "flex", alignItems: "center", marginTop: 8, background: isDark ? "rgba(255,255,255,0.05)" : "#f3f4f6", padding: "6px 10px", borderRadius: 8, width: "fit-content", cursor: "pointer" }} onClick={() => alert("Wallet ID Copied!")}>
+                <span className="font-sans" style={{ fontSize: 12, color: c.text, marginRight: 8 }}>{settings.walletId.substring(0,12)}...</span>
+                <Copy size={12} color={c.textSub} />
+              </div>
             </div>
           </div>
 
           <div className="font-sans" style={{ fontSize: 14, fontWeight: 600, color: c.textSub, marginBottom: 8, textTransform: "uppercase", letterSpacing: "1px" }}>Security</div>
           <div style={{ background: isDark ? "rgba(255,255,255,0.02)" : c.surface, borderRadius: 16, padding: "0 16px", marginBottom: 24, border: `1px solid ${c.border}` }}>
-            <OptionRow icon={Shield} label="Recovery Phrase" color="#b026ff" />
-            <OptionRow icon={Lock} label="App PIN & Biometrics" value="Enabled" color="#39ff14" />
+            <OptionRow icon={Shield} label="Recovery Phrase" color="#b026ff" onClick={() => openModal("Recovery Phrase")} />
+            <OptionRow icon={Lock} label="App PIN & Biometrics" value={settings.appPin} color={settings.appPin === "Enabled" ? "#39ff14" : "#ff4d4d"} onClick={() => updateSetting("appPin", settings.appPin === "Enabled" ? "Disabled" : "Enabled")} />
           </div>
 
           <div className="font-sans" style={{ fontSize: 14, fontWeight: 600, color: c.textSub, marginBottom: 8, textTransform: "uppercase", letterSpacing: "1px" }}>Preferences</div>
           <div style={{ background: isDark ? "rgba(255,255,255,0.02)" : c.surface, borderRadius: 16, padding: "0 16px", marginBottom: 24, border: `1px solid ${c.border}` }}>
-            <OptionRow icon={Settings} label="Default Currency" value="PHP" color="#00f3ff" />
-            <OptionRow icon={Bell} label="Notifications" color="#fcd34d" />
-            <OptionRow icon={Globe} label="Network Provider" value="Mainnet" color="#39ff14" />
+            <OptionRow icon={Settings} label="Default Currency" value={settings.currency} color="#00f3ff" onClick={() => openModal("Select Currency")} />
+            <OptionRow icon={Bell} label="Notifications" value={settings.notifications} color={settings.notifications === "Enabled" ? "#fcd34d" : "#9CA3AF"} onClick={() => updateSetting("notifications", settings.notifications === "Enabled" ? "Disabled" : "Enabled")} />
+            <OptionRow icon={Globe} label="Network Provider" value={settings.network} color="#39ff14" onClick={() => openModal("Select Network")} />
           </div>
         </div>
       );
@@ -388,15 +433,107 @@
 
     function App() {
       const [tab, setTab] = useState("home");
-      const [isDark, setIsDark] = useState(false);
+      const [isDark, setIsDark] = useState(true);
       const c = isDark ? darkTheme : lightTheme;
+
+      const [bchBalance, setBchBalance] = useState(2.0809651);
+      const [totalLent, setTotalLent] = useState(0.20000000);
+      const [totalBorrowed, setTotalBorrowed] = useState(0.05000000);
+      const [txHistory, setTxHistory] = useState(TRANSACTIONS);
+
+      const [settings, setSettings] = useState({
+        currency: "PHP",
+        appPin: "Enabled",
+        notifications: "Enabled",
+        network: "Mainnet",
+        walletId: "bch:qzw7skq289xnx9w22k3f40n8g0nrdp78wz0t39d2m"
+      });
+
+      const updateSetting = (key, val) => setSettings(s => ({ ...s, [key]: val }));
+
+      const [modalState, setModalState] = useState({ isOpen: false, type: "", lender: null });
+      const [amountStr, setAmountStr] = useState("");
+      const [recipientStr, setRecipientStr] = useState("");
+
+      const handleConfirmTx = () => {
+         const amt = parseFloat(amountStr);
+         if (isNaN(amt) || amt <= 0) return;
+         if (modalState.type === "Send" && !recipientStr.trim()) { alert("Please enter a recipient Wallet ID"); return; }
+         
+         let newBch = bchBalance;
+         let newLent = totalLent;
+         let newBorrowed = totalBorrowed;
+         let label = "";
+         let typeVal = "";
+         
+         if (modalState.type === "Receive") {
+             newBch += amt;
+             label = "Received BCH";
+             typeVal = "receive";
+         } else if (modalState.type === "Send") {
+             if (amt > newBch) { alert("Insufficient balance"); return; }
+             newBch -= amt;
+             label = `Sent to ${recipientStr.substring(0, 8)}...`;
+             typeVal = "send";
+         } else if (modalState.type === "Supply") {
+             if (amt > newBch) { alert("Insufficient balance"); return; }
+             newBch -= amt;
+             newLent += amt;
+             label = "Supplied BCH";
+             typeVal = "send";
+         } else if (modalState.type === "Withdraw") {
+             if (amt > newLent) { alert("Insufficient supplied balance"); return; }
+             newBch += amt;
+             newLent -= amt;
+             label = "Withdrew BCH";
+             typeVal = "receive";
+         } else if (modalState.type === "Borrow" || modalState.type.startsWith("Borrow from")) {
+             let limit = modalState.lender ? modalState.lender.available : 1.5;
+             if (!modalState.lender && (newBorrowed + amt > limit)) { alert("Borrow limit exceeded"); return; }
+             if (modalState.lender && (amt > limit)) { alert(`Borrow limit exceeded (Max: ${limit} BCH)`); return; }
+             newBch += amt;
+             newBorrowed += amt;
+             label = modalState.type;
+             typeVal = "receive";
+         } else if (modalState.type === "Repay") {
+             if (amt > newBch) { alert("Insufficient balance"); return; }
+             if (amt > newBorrowed) { alert("Amount exceeds borrowed"); return; }
+             newBch -= amt;
+             newBorrowed -= amt;
+             label = "Repaid BCH";
+             typeVal = "send";
+         }
+
+         setBchBalance(newBch);
+         setTotalLent(newLent);
+         setTotalBorrowed(newBorrowed);
+
+         const newTx = {
+            id: Date.now(),
+            icon: typeVal === "receive" ? Download : Send,
+            label,
+            timestamp: new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+            bchAmount: (typeVal === "receive" ? "+" : "-") + amt.toFixed(8) + " BCH",
+            phpAmount: "Completed"
+         };
+         setTxHistory([newTx, ...txHistory]);
+         
+         setModalState({ isOpen: false, type: "" });
+         setAmountStr("");
+         setRecipientStr("");
+      };
 
       React.useEffect(() => {
         document.body.style.background = c.bg;
       }, [c.bg]);
 
       return (
-        <ThemeContext.Provider value={{ theme: c, isDark, toggleTheme: () => setIsDark(!isDark), setTab }}>
+        <AppContext.Provider value={{ 
+          theme: c, isDark, toggleTheme: () => setIsDark(!isDark), setTab,
+          bchBalance, totalLent, totalBorrowed, txHistory,
+          settings, updateSetting,
+          openModal: (type, lender = null) => setModalState({ isOpen: true, type, lender })
+        }}>
           <div className="font-sans" style={{
             minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 16px",
           }}>
@@ -430,7 +567,7 @@
                   const Icon = t.icon;
                   if (t.isAction) {
                     return (
-                      <div key={t.id} onClick={() => { }} style={{
+                      <div key={t.id} onClick={() => alert("Camera access required for scanning QR codes.")} style={{
                         flex: 1, display: "flex", justifyContent: "center", alignItems: "center", position: "relative"
                       }}>
                         <div style={{
@@ -455,9 +592,199 @@
                   );
                 })}
               </div>
+
+              {/* Tx Modal */}
+              {modalState.isOpen && (
+                <div style={{
+                  position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
+                  background: isDark ? "rgba(0,0,0,0.8)" : "rgba(255,255,255,0.8)",
+                  backdropFilter: "blur(8px)", zIndex: 100,
+                  display: "flex", flexDirection: "column", justifyContent: "flex-end",
+                  padding: 24, paddingBottom: 48
+                }}>
+                  <div style={{
+                    background: c.surface, borderRadius: 28, padding: 24,
+                    boxShadow: isDark ? "0 0 40px rgba(57,255,20,0.15)" : "0 20px 40px rgba(0,0,0,0.1)",
+                    border: isDark ? "1px solid rgba(57,255,20,0.2)" : `1px solid ${c.border}`,
+                    animation: "slideUp 0.3s ease-out"
+                  }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+                      <div className="font-sans" style={{ fontSize: 20, fontWeight: 700, color: c.text }}>{modalState.type === "Menu" ? "Discover & Earn" : modalState.type.startsWith("Select") ? modalState.type : modalState.type === "Recovery Phrase" ? "Recovery Phrase" : `${modalState.type} BCH`}</div>
+                      <div onClick={() => { setModalState({ isOpen: false, type: "" }); setAmountStr(""); setRecipientStr(""); }} style={{ cursor: "pointer", color: c.textSub, padding: 4 }}>✕</div>
+                    </div>
+                    
+                    {modalState.type === "Menu" ? (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                        {[
+                          { icon: Zap, title: "Buy & Sell Crypto", sub: "Fiat on-ramp with lowest fees", color: "#39ff14" },
+                          { icon: CreditCard, title: "BCHave Pro Card", sub: "Spend crypto everywhere", color: "#00f3ff" },
+                          { icon: TrendingUp, title: "Earn Yield", sub: "Stake & earn up to 12% APY", color: "#fcd34d" },
+                          { icon: Landmark, title: "Swap Tokens", sub: "Instant cross-chain swaps", color: "#b026ff" }
+                        ].map((item, i) => (
+                          <div key={i} onClick={() => alert(`${item.title} coming soon!`)} style={{
+                            padding: "16px", borderRadius: 16, background: isDark ? "rgba(255,255,255,0.02)" : c.surface,
+                            border: isDark ? "1px solid rgba(255,255,255,0.05)" : `1px solid ${c.border}`, cursor: "pointer", display: "flex", alignItems: "center", gap: 16
+                          }}>
+                            <div style={{ width: 44, height: 44, borderRadius: 12, background: isDark ? "rgba(255,255,255,0.05)" : "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                              <item.icon size={22} color={item.color} />
+                            </div>
+                            <div style={{ flex: 1 }}>
+                              <div className="font-sans" style={{ fontSize: 15, fontWeight: 700, color: c.text }}>{item.title}</div>
+                              <div className="font-sans" style={{ fontSize: 13, color: c.textSub, marginTop: 4 }}>{item.sub}</div>
+                            </div>
+                            <ChevronRight size={18} color={c.textSub} />
+                          </div>
+                        ))}
+                      </div>
+                    ) : modalState.type === "Recovery Phrase" ? (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                        <div className="font-sans" style={{ fontSize: 13, color: "#ff4d4d", background: "rgba(255, 77, 77, 0.1)", padding: "12px", borderRadius: 12, border: "1px solid rgba(255, 77, 77, 0.3)", lineHeight: 1.5 }}>
+                          <strong>Warning:</strong> Never share this phrase with anyone. Anyone with this phrase can steal your funds.
+                        </div>
+                        <div style={{ 
+                          display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12,
+                          background: isDark ? "rgba(255,255,255,0.02)" : "#f3f4f6", padding: 16, borderRadius: 16,
+                          border: isDark ? "1px solid rgba(255,255,255,0.1)" : `1px solid ${c.border}`
+                        }}>
+                          {["apple", "blanket", "clever", "dinosaur", "engine", "flower", "gentle", "honey", "island", "jungle", "kite", "lemon"].map((word, i) => (
+                            <div key={i} style={{ display: "flex", gap: 8, alignItems: "center", background: isDark ? "rgba(255,255,255,0.05)" : "#fff", padding: "8px 12px", borderRadius: 8, border: isDark ? "none" : `1px solid ${c.border}` }}>
+                              <span className="font-sans" style={{ fontSize: 11, color: c.textSub, width: 16 }}>{i+1}.</span>
+                              <span className="font-sans" style={{ fontSize: 14, color: c.text, fontWeight: 600 }}>{word}</span>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="neon-btn" onClick={() => alert("Recovery phrase copied to clipboard!")} style={{
+                          width: "100%", padding: "16px 0", borderRadius: 16, background: isDark ? "rgba(57,255,20,0.1)" : c.primary,
+                          border: isDark ? "1px solid rgba(57,255,20,0.3)" : "none", display: "flex", justifyContent: "center",
+                          alignItems: "center", cursor: "pointer", color: isDark ? "#39ff14" : "white", fontWeight: 600, fontSize: 16, gap: 8, marginTop: 8
+                        }}>
+                          {isDark && <NeonBorder />}
+                          <Copy size={18} /> Copy to Clipboard
+                        </div>
+                      </div>
+                    ) : modalState.type.startsWith("Select") ? (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                        {(modalState.type === "Select Currency" ? ["PHP", "USD", "EUR", "GBP", "JPY"] : ["Mainnet", "Testnet", "Devnet"]).map(item => (
+                          <div key={item} onClick={() => {
+                            updateSetting(modalState.type === "Select Currency" ? "currency" : "network", item);
+                            setModalState({ isOpen: false, type: "" });
+                          }} style={{
+                            padding: "16px", borderRadius: 12, background: isDark ? "rgba(255,255,255,0.05)" : c.surface,
+                            border: `1px solid ${c.border}`, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center",
+                            color: c.text, fontWeight: 600, fontSize: 16
+                          }}>
+                            {item}
+                            {settings[modalState.type === "Select Currency" ? "currency" : "network"] === item && <div style={{ color: "#39ff14" }}>✓</div>}
+                          </div>
+                        ))}
+                      </div>
+                    ) : modalState.type === "Receive" ? (
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 20 }}>
+                        <div style={{ background: "white", padding: 16, borderRadius: 16, marginBottom: 20 }}>
+                          <QrCode size={200} color="#000" />
+                        </div>
+                        <div className="font-sans" style={{ fontSize: 13, color: c.textSub, marginBottom: 8 }}>Your Wallet Address</div>
+                        <div style={{ 
+                          background: isDark ? "rgba(255,255,255,0.05)" : "#f3f4f6", 
+                          padding: "12px 16px", borderRadius: 12, width: "100%", 
+                          display: "flex", justifyContent: "space-between", alignItems: "center",
+                          border: `1px solid ${c.border}`
+                        }}>
+                          <span className="font-sans" style={{ fontSize: 14, color: c.text, fontWeight: 600, wordBreak: "break-all" }}>
+                            {settings.walletId}
+                          </span>
+                          <Copy size={16} color={c.textSub} style={{ cursor: "pointer", flexShrink: 0, marginLeft: 12 }} onClick={() => alert("Address Copied!")} />
+                        </div>
+                        
+                        <div className="neon-btn" onClick={() => { setModalState({ isOpen: false, type: "" }); setAmountStr(""); setRecipientStr(""); }} style={{
+                          marginTop: 24, width: "100%", padding: "16px 0", borderRadius: 16, background: isDark ? "rgba(57,255,20,0.1)" : c.primary,
+                          border: isDark ? "1px solid rgba(57,255,20,0.3)" : "none", display: "flex", justifyContent: "center",
+                          alignItems: "center", cursor: "pointer", color: isDark ? "#39ff14" : "white", fontWeight: 600, fontSize: 16
+                        }}>
+                          {isDark && <NeonBorder />}
+                          Close
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        {modalState.type === "Send" && (
+                          <div style={{ background: isDark ? "rgba(255,255,255,0.05)" : "#f3f4f6", borderRadius: 16, padding: "16px", marginBottom: 12 }}>
+                            <div className="font-sans" style={{ fontSize: 13, color: c.textSub, marginBottom: 8 }}>Recipient Wallet ID <span style={{color: "#ff4d4d"}}>*</span></div>
+                            <input 
+                              type="text" 
+                              value={recipientStr} 
+                              onChange={e => setRecipientStr(e.target.value)}
+                              placeholder="e.g. bch:qzw7sk..."
+                              style={{ 
+                                width: "100%", background: "transparent", border: "none", outline: "none", 
+                                fontSize: 16, color: c.text, fontFamily: "Inter, sans-serif" 
+                              }} 
+                            />
+                          </div>
+                        )}
+                        
+                        <div style={{ background: isDark ? "rgba(255,255,255,0.05)" : "#f3f4f6", borderRadius: 16, padding: "16px", marginBottom: 20 }}>
+                          <div className="font-sans" style={{ fontSize: 13, color: c.textSub, marginBottom: 8 }}>Amount (BCH)</div>
+                          <input 
+                            type="number" 
+                            value={amountStr} 
+                            onChange={e => setAmountStr(e.target.value)}
+                            placeholder="0.00"
+                            style={{ 
+                              width: "100%", background: "transparent", border: "none", outline: "none", 
+                              fontSize: 32, fontWeight: 700, color: c.text, fontFamily: "Inter, sans-serif" 
+                            }} 
+                          />
+                          {modalState.lender && parseFloat(amountStr) > 0 && (
+                            <div className="font-sans" style={{ marginTop: 12, fontSize: 13, color: c.textSub, borderTop: `1px solid ${c.border}`, paddingTop: 12 }}>
+                              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                                <span>APR</span>
+                                <span style={{ color: "#ff4d4d", fontWeight: 600 }}>{modalState.lender.apr}%</span>
+                              </div>
+                              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                                <span>Term</span>
+                                <span>12 Months</span>
+                              </div>
+                              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                                <span>Monthly Payment</span>
+                                <span style={{ color: c.text, fontWeight: 600 }}>
+                                  {((parseFloat(amountStr) * (1 + modalState.lender.apr / 100)) / 12).toFixed(6)} BCH
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        
+                        {(() => {
+                          let isTxValid = true;
+                          const amt = parseFloat(amountStr);
+                          if (isNaN(amt) || amt <= 0) isTxValid = false;
+                          if (modalState.type === "Send" && !recipientStr.trim()) isTxValid = false;
+                          
+                          return (
+                            <div className={isTxValid ? "neon-btn" : ""} onClick={isTxValid ? handleConfirmTx : undefined} style={{
+                              padding: "16px 0", borderRadius: 16, 
+                              background: isTxValid ? (isDark ? "rgba(57,255,20,0.1)" : c.primary) : (isDark ? "rgba(255,255,255,0.05)" : "#e5e7eb"),
+                              border: isTxValid ? (isDark ? "1px solid rgba(57,255,20,0.3)" : "none") : "none", 
+                              display: "flex", justifyContent: "center",
+                              alignItems: "center", cursor: isTxValid ? "pointer" : "not-allowed", 
+                              color: isTxValid ? (isDark ? "#39ff14" : "white") : (isDark ? "rgba(255,255,255,0.3)" : "#9ca3af"), 
+                              fontWeight: 600, fontSize: 16,
+                              transition: "all 0.2s"
+                            }}>
+                              {isDark && isTxValid && <NeonBorder />}
+                              Confirm {modalState.type}
+                            </div>
+                          );
+                        })()}
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
-        </ThemeContext.Provider>
+        </AppContext.Provider>
       );
     }
 
