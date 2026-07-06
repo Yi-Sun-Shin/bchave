@@ -35,7 +35,7 @@
     const {
       Menu, Bell, ArrowDown, ArrowUpRight, Scan, QrCode,
       PiggyBank, CreditCard, Coins, Landmark, Download, Send,
-      TrendingUp, Home, Activity, Wallet, Eye, ChevronRight, Zap, Bitcoin, User, Settings, Sun, Moon, Shield, Lock, Globe, Copy
+      TrendingUp, Home, Activity, Wallet, Eye, ChevronRight, Zap, Bitcoin, User, Settings, Sun, Moon, Shield, Lock, Globe, Copy, Star, CheckCircle2
     } = window.LucideReact;
 
     const lightTheme = {
@@ -192,8 +192,8 @@
               ) : (
                 <Moon size={24} color={c.text} style={{ cursor: "pointer" }} onClick={toggleTheme} />
               )}
-              <Bell size={24} color={c.text} style={{ cursor: "pointer" }} onClick={() => alert("No new notifications")} />
-              <Settings size={24} color={c.text} style={{ cursor: "pointer" }} onClick={() => setTab("profile")} />
+              <Bell size={24} color={c.text} style={{ cursor: "pointer" }} onClick={() => openModal("Notifications")} />
+              <Settings size={24} color={c.text} style={{ cursor: "pointer" }} onClick={() => setTab("settings")} />
             </div>
           </div>
 
@@ -384,8 +384,8 @@
       );
     }
 
-    function WalletSettingsScreen() {
-      const { theme: c, isDark, settings, updateSetting, openModal } = useAppContext();
+    function ProfileScreen() {
+      const { theme: c, isDark, settings, isPro } = useAppContext();
       return (
         <div style={{ paddingBottom: 20 }}>
           <div className="font-sans" style={{ fontSize: 24, fontWeight: 700, color: c.text, marginBottom: 24 }}>Profile</div>
@@ -396,7 +396,15 @@
               <img src="profile.jpg" alt="Profile" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
             </div>
             <div style={{ flex: 1 }}>
-              <div className="font-sans" style={{ fontSize: 20, fontWeight: 700, color: c.text }}>Recardo Omlang</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div className="font-sans" style={{ fontSize: 20, fontWeight: 700, color: c.text }}>Recardo Omlang</div>
+                {isPro && (
+                  <div style={{ background: "linear-gradient(135deg, #fcd34d, #f59e0b)", padding: "2px 6px", borderRadius: 6, display: "flex", alignItems: "center", gap: 4 }}>
+                    <Star size={10} color="#fff" fill="#fff" />
+                    <span className="font-sans" style={{ fontSize: 10, fontWeight: 800, color: "#fff", textTransform: "uppercase" }}>PRO</span>
+                  </div>
+                )}
+              </div>
               <div className="font-sans" style={{ fontSize: 14, color: c.textSub, marginTop: 4 }}>@Odracer_Sats</div>
               <div style={{ display: "flex", alignItems: "center", marginTop: 8, background: isDark ? "rgba(255,255,255,0.05)" : "#f3f4f6", padding: "6px 10px", borderRadius: 8, width: "fit-content", cursor: "pointer" }} onClick={() => alert("Wallet ID Copied!")}>
                 <span className="font-sans" style={{ fontSize: 12, color: c.text, marginRight: 8 }}>{settings.walletId.substring(0,12)}...</span>
@@ -404,6 +412,22 @@
               </div>
             </div>
           </div>
+
+          {/* Profile Details Mock */}
+          <div className="font-sans" style={{ fontSize: 14, fontWeight: 600, color: c.textSub, marginBottom: 8, textTransform: "uppercase", letterSpacing: "1px" }}>Account Details</div>
+          <div style={{ background: isDark ? "rgba(255,255,255,0.02)" : c.surface, borderRadius: 16, padding: "0 16px", marginBottom: 24, border: `1px solid ${c.border}` }}>
+            <OptionRow icon={Zap} label="Account Tier" value={isPro ? "BCHave Pro" : "Free Basic"} color={isPro ? "#fcd34d" : "#00f3ff"} onClick={() => {}} />
+            <OptionRow icon={Activity} label="Member Since" value="July 2026" color="#39ff14" onClick={() => {}} />
+          </div>
+        </div>
+      );
+    }
+
+    function SettingsScreen() {
+      const { theme: c, isDark, settings, updateSetting, openModal } = useAppContext();
+      return (
+        <div style={{ paddingBottom: 20 }}>
+          <div className="font-sans" style={{ fontSize: 24, fontWeight: 700, color: c.text, marginBottom: 24 }}>Settings</div>
 
           <div className="font-sans" style={{ fontSize: 14, fontWeight: 600, color: c.textSub, marginBottom: 8, textTransform: "uppercase", letterSpacing: "1px" }}>Security</div>
           <div style={{ background: isDark ? "rgba(255,255,255,0.02)" : c.surface, borderRadius: 16, padding: "0 16px", marginBottom: 24, border: `1px solid ${c.border}` }}>
@@ -440,6 +464,7 @@
       const [totalLent, setTotalLent] = useState(0.20000000);
       const [totalBorrowed, setTotalBorrowed] = useState(0.05000000);
       const [txHistory, setTxHistory] = useState(TRANSACTIONS);
+      const [isPro, setIsPro] = useState(false);
 
       const [settings, setSettings] = useState({
         currency: "PHP",
@@ -452,6 +477,8 @@
       const updateSetting = (key, val) => setSettings(s => ({ ...s, [key]: val }));
 
       const [modalState, setModalState] = useState({ isOpen: false, type: "", lender: null });
+      const openModal = (type, lender = null) => setModalState({ isOpen: true, type, lender });
+      
       const [amountStr, setAmountStr] = useState("");
       const [recipientStr, setRecipientStr] = useState("");
 
@@ -531,8 +558,9 @@
         <AppContext.Provider value={{ 
           theme: c, isDark, toggleTheme: () => setIsDark(!isDark), setTab,
           bchBalance, totalLent, totalBorrowed, txHistory,
-          settings, updateSetting,
-          openModal: (type, lender = null) => setModalState({ isOpen: true, type, lender })
+          settings, updateSetting, isPro, setIsPro,
+          openModal,
+          bchBalance, setBchBalance 
         }}>
           <div className="font-sans" style={{
             minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 16px",
@@ -554,7 +582,8 @@
                 {tab === "home" && <HomeScreen />}
                 {tab === "activity" && <ActivityScreen />}
                 {tab === "lend" && <LendScreen />}
-                {tab === "profile" && <WalletSettingsScreen />}
+                {tab === "profile" && <ProfileScreen />}
+                {tab === "settings" && <SettingsScreen />}
               </div>
 
               {/* tab bar */}
@@ -609,19 +638,81 @@
                     animation: "slideUp 0.3s ease-out"
                   }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-                      <div className="font-sans" style={{ fontSize: 20, fontWeight: 700, color: c.text }}>{modalState.type === "Menu" ? "Discover & Earn" : modalState.type.startsWith("Select") ? modalState.type : modalState.type === "Recovery Phrase" ? "Recovery Phrase" : `${modalState.type} BCH`}</div>
+                      <div className="font-sans" style={{ fontSize: 20, fontWeight: 700, color: c.text }}>{modalState.type === "Menu" ? "Discover & Earn" : modalState.type === "Notifications" ? "Notifications" : modalState.type.startsWith("Select") ? modalState.type : modalState.type === "Recovery Phrase" ? "Recovery Phrase" : `${modalState.type} BCH`}</div>
                       <div onClick={() => { setModalState({ isOpen: false, type: "" }); setAmountStr(""); setRecipientStr(""); }} style={{ cursor: "pointer", color: c.textSub, padding: 4 }}>✕</div>
                     </div>
                     
-                    {modalState.type === "Menu" ? (
+                    {modalState.type === "Notifications" ? (
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16, padding: "32px 0" }}>
+                        <div style={{ width: 64, height: 64, borderRadius: "50%", background: isDark ? "rgba(255,255,255,0.05)" : "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 8 }}>
+                          <Bell size={32} color={c.textSub} />
+                        </div>
+                        <div className="font-sans" style={{ fontSize: 18, fontWeight: 700, color: c.text, textAlign: "center" }}>You're all caught up!</div>
+                        <div className="font-sans" style={{ fontSize: 14, color: c.textSub, textAlign: "center" }}>Check back later for updates, transfers, and alerts.</div>
+                      </div>
+                    ) : modalState.type === "BCHave Pro" ? (
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
+                        <div style={{ width: 80, height: 80, borderRadius: "50%", background: "linear-gradient(135deg, #fcd34d, #f59e0b)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 8, boxShadow: "0 10px 25px rgba(245, 158, 11, 0.4)" }}>
+                          <Star size={40} color="#fff" fill="#fff" />
+                        </div>
+                        {isPro ? (
+                          <>
+                            <div className="font-sans" style={{ fontSize: 24, fontWeight: 800, color: c.text, textAlign: "center" }}>You are Pro!</div>
+                            <div className="font-sans" style={{ fontSize: 14, color: c.textSub, textAlign: "center", marginBottom: 16 }}>Enjoy your zero-fee transfers, higher borrow limits, and priority support.</div>
+                            <div className="neon-btn" onClick={() => setModalState({ isOpen: false, type: "" })} style={{
+                              width: "100%", padding: "16px 0", borderRadius: 16, background: isDark ? "rgba(255,255,255,0.05)" : "#f3f4f6",
+                              border: isDark ? "1px solid rgba(255,255,255,0.1)" : `1px solid ${c.border}`, display: "flex", justifyContent: "center",
+                              alignItems: "center", cursor: "pointer", color: c.text, fontWeight: 600, fontSize: 16
+                            }}>
+                              Back to Home
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="font-sans" style={{ fontSize: 24, fontWeight: 800, color: c.text, textAlign: "center" }}>Upgrade to Pro</div>
+                            <div className="font-sans" style={{ fontSize: 14, color: c.textSub, textAlign: "center", marginBottom: 8 }}>Unlock the full potential of bchave for just <span style={{ color: c.text, fontWeight: 700 }}>0.05 BCH / month</span>.</div>
+                            
+                            <div style={{ width: "100%", background: isDark ? "rgba(255,255,255,0.02)" : "#f9fafb", borderRadius: 16, padding: 16, border: `1px solid ${c.border}`, marginBottom: 8 }}>
+                              {[
+                                "Zero-fee transactions",
+                                "Increase borrow limit to 50 BCH",
+                                "Premium metal physical card",
+                                "24/7 priority support"
+                              ].map((benefit, idx) => (
+                                <div key={idx} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: idx === 3 ? 0 : 12 }}>
+                                  <CheckCircle2 size={18} color="#39ff14" />
+                                  <span className="font-sans" style={{ fontSize: 14, color: c.text, fontWeight: 500 }}>{benefit}</span>
+                                </div>
+                              ))}
+                            </div>
+
+                            <div className="neon-btn" onClick={() => {
+                              if (bchBalance >= 0.05) {
+                                setBchBalance(prev => prev - 0.05);
+                                setIsPro(true);
+                              }
+                            }} style={{
+                              width: "100%", padding: "16px 0", borderRadius: 16, 
+                              background: bchBalance >= 0.05 ? "linear-gradient(135deg, #fcd34d, #f59e0b)" : (isDark ? "rgba(255,255,255,0.05)" : "#e5e7eb"),
+                              border: "none", display: "flex", justifyContent: "center",
+                              alignItems: "center", cursor: bchBalance >= 0.05 ? "pointer" : "not-allowed", 
+                              color: bchBalance >= 0.05 ? "#fff" : c.textSub, fontWeight: 700, fontSize: 16,
+                              boxShadow: bchBalance >= 0.05 ? "0 10px 20px rgba(245, 158, 11, 0.3)" : "none"
+                            }}>
+                              {bchBalance >= 0.05 ? "Subscribe Now" : "Insufficient Balance"}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    ) : modalState.type === "Menu" ? (
                       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                         {[
                           { icon: Zap, title: "Buy & Sell Crypto", sub: "Fiat on-ramp with lowest fees", color: "#39ff14" },
-                          { icon: CreditCard, title: "BCHave Pro Card", sub: "Spend crypto everywhere", color: "#00f3ff" },
+                          { icon: CreditCard, title: "BCHave Pro", sub: "Zero fees & premium support", color: "#00f3ff", action: () => { setModalState({ isOpen: false, type: "" }); setTimeout(() => openModal("BCHave Pro"), 100); } },
                           { icon: TrendingUp, title: "Earn Yield", sub: "Stake & earn up to 12% APY", color: "#fcd34d" },
                           { icon: Landmark, title: "Swap Tokens", sub: "Instant cross-chain swaps", color: "#b026ff" }
                         ].map((item, i) => (
-                          <div key={i} onClick={() => alert(`${item.title} coming soon!`)} style={{
+                          <div key={i} onClick={item.action || (() => alert(`${item.title} coming soon!`))} style={{
                             padding: "16px", borderRadius: 16, background: isDark ? "rgba(255,255,255,0.02)" : c.surface,
                             border: isDark ? "1px solid rgba(255,255,255,0.05)" : `1px solid ${c.border}`, cursor: "pointer", display: "flex", alignItems: "center", gap: 16
                           }}>
