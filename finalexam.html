@@ -460,7 +460,7 @@
       const [isDark, setIsDark] = useState(true);
       const c = isDark ? darkTheme : lightTheme;
 
-      const [bchBalance, setBchBalance] = useState(2.0809651);
+      const [bchBalance, setBchBalance] = useState(38.003828);
       const [totalLent, setTotalLent] = useState(0.20000000);
       const [totalBorrowed, setTotalBorrowed] = useState(0.05000000);
       const [txHistory, setTxHistory] = useState(TRANSACTIONS);
@@ -638,7 +638,7 @@
                     animation: "slideUp 0.3s ease-out"
                   }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-                      <div className="font-sans" style={{ fontSize: 20, fontWeight: 700, color: c.text }}>{modalState.type === "Menu" ? "Discover & Earn" : modalState.type === "Notifications" ? "Notifications" : modalState.type.startsWith("Select") ? modalState.type : modalState.type === "Recovery Phrase" ? "Recovery Phrase" : `${modalState.type} BCH`}</div>
+                      <div className="font-sans" style={{ fontSize: 20, fontWeight: 700, color: c.text }}>{modalState.type === "Menu" ? "Discover & Earn" : modalState.type === "Notifications" ? "Notifications" : modalState.type.startsWith("Select") ? modalState.type : modalState.type === "Recovery Phrase" ? "Recovery Phrase" : modalState.type === "Coming Soon" ? "Coming Soon" : `${modalState.type} BCH`}</div>
                       <div onClick={() => { setModalState({ isOpen: false, type: "" }); setAmountStr(""); setRecipientStr(""); }} style={{ cursor: "pointer", color: c.textSub, padding: 4 }}>✕</div>
                     </div>
                     
@@ -704,6 +704,21 @@
                           </>
                         )}
                       </div>
+                    ) : modalState.type === "Coming Soon" ? (
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16, padding: "32px 0" }}>
+                        <div style={{ width: 64, height: 64, borderRadius: "50%", background: isDark ? "rgba(255,255,255,0.05)" : "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 8 }}>
+                          <Lock size={32} color={c.textSub} />
+                        </div>
+                        <div className="font-sans" style={{ fontSize: 18, fontWeight: 700, color: c.text, textAlign: "center" }}>Feature in Development</div>
+                        <div className="font-sans" style={{ fontSize: 14, color: c.textSub, textAlign: "center" }}>This feature is coming in a future update.</div>
+                        <div className="neon-btn" onClick={() => setModalState({ isOpen: false, type: "" })} style={{
+                          width: "100%", padding: "16px 0", borderRadius: 16, background: isDark ? "rgba(255,255,255,0.05)" : "#f3f4f6",
+                          border: isDark ? "1px solid rgba(255,255,255,0.1)" : `1px solid ${c.border}`, display: "flex", justifyContent: "center",
+                          alignItems: "center", cursor: "pointer", color: c.text, fontWeight: 600, fontSize: 16, marginTop: 8
+                        }}>
+                          Got it
+                        </div>
+                      </div>
                     ) : modalState.type === "Menu" ? (
                       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                         {[
@@ -712,7 +727,7 @@
                           { icon: TrendingUp, title: "Earn Yield", sub: "Stake & earn up to 12% APY", color: "#fcd34d" },
                           { icon: Landmark, title: "Swap Tokens", sub: "Instant cross-chain swaps", color: "#b026ff" }
                         ].map((item, i) => (
-                          <div key={i} onClick={item.action || (() => alert(`${item.title} coming soon!`))} style={{
+                          <div key={i} onClick={item.action || (() => { setModalState({ isOpen: false, type: "" }); setTimeout(() => openModal("Coming Soon"), 100); })} style={{
                             padding: "16px", borderRadius: 16, background: isDark ? "rgba(255,255,255,0.02)" : c.surface,
                             border: isDark ? "1px solid rgba(255,255,255,0.05)" : `1px solid ${c.border}`, cursor: "pointer", display: "flex", alignItems: "center", gap: 16
                           }}>
